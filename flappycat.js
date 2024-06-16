@@ -5,12 +5,20 @@ let board_height = 640;
 let context;
 
 // Cat constants
+let cat_frames = [
+    "./assets/cat_player_3x_1.png",
+    "./assets/cat_player_3x_2.png",
+    "./assets/cat_player_3x_3.png",
+    "./assets/cat_player_3x_4.png"];
+let cat_images = [];
+let cat_frame_index = 0;
+let cat_frame_interval;
 let cat_img;
 let cat_width = 120;
 let cat_height = 120;
 let cat_x = board_width/8;
 let cat_y = board_height/2.3;
-
+let cat_velocity = 0;
 let cat = {
     x : cat_x, 
     y : cat_y,
@@ -67,7 +75,7 @@ let banner_variance_delay = 500;
 
 // Physics constants (super advanced physics engine)
 pipe_vel_x = -0.8;
-bird_vel_y = 0.06;
+global_accel = 0.06;
 
 // NASA PC required to reach here \/\/
 window.onload = function() {
@@ -77,8 +85,14 @@ window.onload = function() {
     context = board.getContext("2d");
     
     // Create airborne michi
-    cat_img = new Image();
-    cat_img.src = "./assets/cat_player_3x_1.png";
+    cat_frames.forEach(src => {
+        let img = new Image();
+        img.src = src;
+        cat_images.push(img);
+    });
+
+    // Set initial cat image
+    cat_img = cat_images[0];
 
     // Create paw/pipe objects
     [top_pipe_imgs, bottom_pipe_imgs] = get_pipe_images(); 
@@ -113,6 +127,7 @@ window.onload = function() {
 
     requestAnimationFrame(animate);
     setInterval(place_paws, 2000);
+    document.addEventListener("keydown", cat_jump);
 }
 
 // Create new frame
@@ -135,6 +150,13 @@ function animate() {
     }
 
     // Redraw cat
+    cat_velocity += global_accel;
+    cat.y += cat_velocity;
+    if (cat.y > board_height - cat_height) {
+        cat.y = board_height - cat_height;
+        cat_img = cat_images[0];
+        clearInterval(cat_frame_interval);
+    }
     context.drawImage(cat_img, cat.x, cat.y, cat.width, cat.height);
 
     // Move and redraw pipes
@@ -203,6 +225,36 @@ function place_background() {
     }
 
     background_array.push(background);
+}
+
+// Handle "jump" events
+function cat_jump(event) {
+    if (event.code == "Space") {
+        cat_velocity = -3;
+        animate_cat_flight();
+    }
+}
+
+// Animation for cat "jump" - I grabbed this online, idk how it works yet, could also use some fine tuning <-------------------------------------
+function animate_cat_flight() {
+    let animation_duration = cat_frames.length * 100; // Duration for one cycle of animation
+
+    // Clear any existing intervals
+    if (cat_frame_interval) {
+        clearInterval(cat_frame_interval);
+    }
+
+    cat_frame_index = 1;
+    cat_frame_interval = setInterval(() => {
+        cat_img = cat_images[cat_frame_index];
+        cat_frame_index = (cat_frame_index + 1) % cat_frames.length;
+    }, 100);
+
+    // Stop the animation after one cycle
+    setTimeout(() => {
+        clearInterval(cat_frame_interval);
+        cat_img = cat_images[0]; // Reset to the first frame
+    }, animation_duration);
 }
 
 // Return random index given an array_length
