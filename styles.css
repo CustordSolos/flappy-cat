@@ -1,10 +1,14 @@
 body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
     text-align: center;
     font-family: 'Courier New', Courier, monospace;
-    background-color: rgb(58, 30, 51);
+    background-color: rgb(124, 63, 109);
+    margin: 0;
 }
 
 #board {
     background-image: url(/Assets/4.png);
-    background-color: aquamarine;
 }
