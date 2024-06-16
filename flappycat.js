@@ -58,7 +58,7 @@ for (let index = 0; index < 7; ++index) { // Backgrounds 1->7
 }
 let background_height = 640;
 let background_width = 1920;
-let background_scroll_speed = -3// Speed the backgrounds move left (-0.2)
+let background_scroll_speed = -0.3// Speed the backgrounds move left (-0.3)
 
 // Top/bottom banner constants
 let top_banner_address = "./assets/cloud_top.png";
