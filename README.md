@@ -1,2 +1,2 @@
-# flappy-cat
-flappy cat w vlad
+# Flappy Cat
+**Flappy cat** game with kuznetsov maths
