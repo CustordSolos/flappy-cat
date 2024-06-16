@@ -1,4 +1,10 @@
 body {
     text-align: center;
     font-family: 'Courier New', Courier, monospace;
+    background-color: rgb(58, 30, 51);
+}
+
+#board {
+    background-image: url(/Assets/4.png);
+    background-color: aquamarine;
 }
