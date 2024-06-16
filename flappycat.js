@@ -18,7 +18,6 @@ let cat = {
     height : cat_height
 }
 
-
 // Pipe constants
 let pipe_array = []; // Pipes on screen
 let pipe_width = 64;
@@ -28,7 +27,6 @@ let pipe_y = 0;
 let top_pipe_imgs = []; // Image objects
 let bottom_pipe_imgs = []; // Image objects
 let pipe_addresses = get_pipe_names(); // Image addresses
-
 // Return base pipe names array (without top.png/bottom.png)
 function get_pipe_names() {
     let i = "paw_pipe_";
@@ -43,7 +41,6 @@ function get_pipe_names() {
     return pipe_addresses;
 }
 
-
 // Background constants
 let background_array = []; // Backgrounds on screen
 let background_addresses = [] // Image addresses (shit practice but :D)
@@ -54,6 +51,19 @@ for (let index = 0; index < 7; ++index) { // Backgrounds 1->7
 let background_height = 640;
 let background_width = 1920;
 let background_scroll_speed = -0.2
+
+// Top/bottom banner constants
+let top_banner_address = "./assets/cloud_top.png";
+let bottom_banner_address = "./assets/cloud_bottom.png";
+let banner_width = 360;
+let banner_height = 48;
+let banner_y_variance = 10;
+let top_banner;
+let bottom_banner;
+let temp_counter = 0;
+let variance_top = 0;
+let variance_bottom = 0;
+let banner_variance_delay = 500;
 
 // Physics constants (super advanced physics engine)
 pipe_vel_x = -0.8;
@@ -95,6 +105,12 @@ window.onload = function() {
         background_images.push(new_bg);
     }
 
+    // Banners (clouds)
+    top_banner = new Image();
+    top_banner.src = top_banner_address;
+    bottom_banner = new Image();
+    bottom_banner.src = bottom_banner_address;
+
     requestAnimationFrame(animate);
     setInterval(place_paws, 2000);
 }
@@ -128,6 +144,16 @@ function animate() {
         context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
     }
 
+    // Redraw banners last (as they should be highest z-index)
+    temp_counter += 1;
+    // Change variance at interval
+    if (temp_counter > banner_variance_delay / 5) { // This needs redesigning lol, shitty work around for a timer, but is entirely reliant on fps
+        temp_counter = 0
+        variance_top = Math.floor(Math.random() * banner_y_variance);
+        variance_bottom = Math.floor(Math.random() * banner_y_variance);
+    }
+    context.drawImage(top_banner, 0, 0 - variance_top, banner_width, banner_height);
+    context.drawImage(bottom_banner, 0, board_height - banner_height + variance_bottom, banner_width, banner_height);
 }
 
 // Manifest cat grippers
