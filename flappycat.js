@@ -17,17 +17,25 @@ let cat = {
     height : catHeight
 }
 
-//set object for paw pipes
+//variables paw pipes
 let pipeArray = [];
-let pipeWidth;
-let pipeHeight;
-let pipeX;
-let pipeY;
+let pipeWidth = 64;
+let pipeHeight = 512;
+let pipeX = boardWidth;
+let pipeY = 0;
 let topPipeImg;
 let bottomPipeImg;
 
+//create topPipe object
+let topPipe = {
+    x : pipeX-100,
+    y : pipeY-200,
+    width : pipeWidth,
+    height : pipeHeight
+}
 
-
+//game physics
+pipeVelX = 0.1;
 
 
 window.onload = function() {
@@ -49,9 +57,8 @@ window.onload = function() {
 
     //create paw pipes
     topPipeImg = new Image();
-    topPipeImg.src = "./Assests/paw_pipe_orange_stripes_top.png";
-    bottomPipeImg = new Image();
-    bottomPipeImg.src = "./Assests/paw_pipe_orange_stripes.png";
+    topPipeImg.src = "./Assets/paw_pipe_orange_stripes_top.png";
+
 
 }
 
@@ -62,9 +69,16 @@ function animate() {
     //Draw cat after clearing again
     context.drawImage(catImg, cat.x, cat.y, cat.width, cat.height);
 
-    //Request the next frame
-    requestAnimationFrame(animate);
+    //Draw paw pipe
+    //context.drawImage(topPipeImg, topPipe.x, topPipe.y, topPipe.width, topPipe.height); //not sure if needed because redraws anyway after moves pipe and updates
+
+    //Move paw pipe to the left with set velocity
+    topPipe.x -= pipeVelX;
+    context.drawImage(topPipeImg, topPipe.x, topPipe.y, topPipe.width, topPipe.height);
 
     
+
+    //Request the next frame
+    requestAnimationFrame(animate);
 
 }
