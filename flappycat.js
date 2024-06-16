@@ -58,7 +58,7 @@ for (let index = 0; index < 7; ++index) { // Backgrounds 1->7
 }
 let background_height = 640;
 let background_width = 1920;
-let background_scroll_speed = -0.2 // Speed the backgrounds move left
+let background_scroll_speed = -3// Speed the backgrounds move left (-0.2)
 
 // Top/bottom banner constants
 let top_banner_address = "./assets/cloud_top.png";
@@ -115,7 +115,7 @@ window.onload = function() {
     // Backgrounds
     for (let index = 0; index < background_addresses.length; ++index) { // For all file addresses in the background_addresses, create new image objects and add them to the background_images array
         new_bg = new Image();
-        new_bg.src = background_addresses[index]
+        new_bg.src = background_addresses[index];
         background_images.push(new_bg);
     }
 
@@ -135,16 +135,18 @@ function animate() {
     requestAnimationFrame(animate);
     context.clearRect(0,0, board_width, board_height);
 
-    // Scroll background
+    // Scroll background (draw first as it is the background)
     // Ensure there are at least two backgrounds (as this is the maximum that could be in the viewport at any time)
     while (background_array.length != 2) {
         place_background();
     }
-    // If a background has finished scrolling, pop it from the array and ammend a new one to the end
     if (background_array[0].x < -background_width) {
-        background_array = background_array.slice(1);
+        let temp_array = [] // Need to use temp_array, acting on the array itself exhibits weird behaviour, you can try it if you want
+        temp_array = background_array.slice(1); // ^^ Just change this to background_array = ...
+        background_array = temp_array
         place_background();
     }
+    // If a background has finished scrolling, pop it from the array and ammend a new one to the end
     // Moves all active backgrounds to the left (background_scroll_speed)
     for (let index = 0; index < background_array.length; index++) {
         let bg = background_array[index];
@@ -215,11 +217,11 @@ function place_paws() { // Needs: check for game over, check for passed pipes
 
 function place_background() {
     let bg_img = background_images[random_index(background_addresses.length)]; // Random image object
-    let bg_x = 1 // Default position for first image (top left)
+    let bg_x = 0 // Default position for first image (top left)
 
     // If already a background, positions x to the left of existing
     if (background_array.length > 0) { 
-        bg_x = background_width // -1 removes gap
+        bg_x = background_array[0].x + background_width // Sets x value to 1 width away from the background infront of it
     }
 
     // Background obj
@@ -229,6 +231,7 @@ function place_background() {
     }
 
     background_array.push(background);
+    console.log(background_array) // TEMP
 }
 
 // Handle "jump" events
