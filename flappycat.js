@@ -1,14 +1,16 @@
-// Board constants
+// Board 
 let board;
 const board_width = 360;
 const board_height = 640;
 let context;
+let completed_loading = false;
 
 // Score
 let high_score = 0;
 let current_score = 0;
 let game_over = false;
-// Cat constants
+
+// Cat
 const cat_frames = [
     "./assets/cat_player_3x_1.png",
     "./assets/cat_player_3x_2.png",
@@ -38,18 +40,13 @@ const cat_hitbox = {
     y2 : 102
 }
 
-
-// Pipe constants
+// Pipes
 let pipe_array = []; // Pipes on screen
 const pipe_width = 66; 
 const pipe_height = 522; 
 let top_pipe_imgs = []; // Image objects
 let bottom_pipe_imgs = []; // Image objects
 let pipe_addresses = []; // Image addresses
-// Pipe file names (without top/bottom)
-for (let index = 0; index < 8; ++index) {
-    pipe_addresses.push("./assets/paw_pipe_3x_" + (index+1));
-}
 const paw_hitbox = {
     x1 : 9,
     x2 : 54,
@@ -58,20 +55,15 @@ const paw_hitbox = {
 }
 let place_pipe_interval;
 
-
-// Background constants
+// Background
 let background_array = []; // Backgrounds on screen
 let background_addresses = []
 let background_images = []; // Image objects
-// Background file names 1 -> 7
-for (let index = 0; index < 7; ++index) {
-    background_addresses.push("./assets/" + (index+1) + ".png");
-}
 const background_height = 640;
 const background_width = 1920;
 const background_scroll_speed = -0.3
 
-// Top/bottom banner constants
+// Top/bottom banner
 const top_banner_address = "./assets/cloud_top.png";
 const bottom_banner_address = "./assets/cloud_bottom.png";
 const banner_width = 360;
@@ -84,130 +76,226 @@ let variance_top = 0; // Initial variance
 let variance_bottom = 0; // ^^
 const banner_variance_delay = 700; // Delay in ms for cloud movement
 
-// Physics constants (super advanced physics engine)
+// Numbers
+let score_array = [];
+let number_addresses = [];
+let number_images = [];
+const number_height = 45;
+const score_display_y = 80
+
+// Physics (super advanced physics engine)
 const pipe_vel_x = -0.8; // Scroll speed for pipes (paws)
 const global_accel = 0.06; // G for cat
 const max_vel = 10;
 
+
+
+
 // NASA PC required to reach here \/\/
-window.onload = function() {
+window.onload = async function() {
     board = document.getElementById("board");
     board.height = board_height;
     board.width = board_width;
     context = board.getContext("2d");
-    
-    // Create airborne michi
-    cat_frames.forEach(src => {
-        let img = new Image();
-        img.src = src;
-        cat_images.push(img);
+    await new Promise((resolve, reject) => {
+        load_and_push_assets(resolve); // Pass resolve function to load_and_push_assets
     });
+    update_score_array(); // Set initial 0
 
+    requestAnimationFrame(animate); // Calls animate at a rate matching refresh rate
+    setInterval(update_banner_variance, 1000) // Changes cloud pos every second
+    document.addEventListener("keydown", cat_jump); 
+}
+
+// Load all images
+function load_and_push_assets(resolve) {
+    let promises = [];
+
+    // Michi (cat frames)
+    cat_frames.forEach(address => {
+        let new_frame = new Image();
+        new_frame.src = address;
+        cat_images.push(new_frame);
+        promises.push(new Promise((resolve, reject) => {
+            new_frame.onload = resolve;
+            new_frame.onerror = reject;
+        }));
+    });
     // Set initial cat image
     cat_img = cat_images[0];
 
-    // Create paw/pipe objects
-    [top_pipe_imgs, bottom_pipe_imgs] = get_pipe_images(); // This is just written in [ ] because the function returns 2 variables, they can still be accessed individually, it is not an array
-    // Return two arrays (top and bottom pipes) of image objects
-    function get_pipe_images() {
-        for (let index = 0; index < pipe_addresses.length; ++index) { // Recall that pipe_addresses is an array holding the file names
-            // Top pipe images
-            new_top_pipe = new Image();
-            new_top_pipe.src = pipe_addresses[index] + "_top.png"; // top.png ...
-            top_pipe_imgs.push(new_top_pipe);
-
-            // Bottom pipe images
-            new_bottom_pipe = new Image();
-            new_bottom_pipe.src = pipe_addresses[index] + "_bottom.png"; // bottom.png ...
-            bottom_pipe_imgs.push(new_bottom_pipe);
-        }
-        return [top_pipe_imgs, bottom_pipe_imgs];
+    // Pipes
+    for (let index = 0; index < 8; ++index) {
+        pipe_addresses.push("./assets/paw_pipe_3x_" + (index + 1));
     }
+    pipe_addresses.forEach(address => {
+        let new_top_pipe = new Image();
+        new_top_pipe.src = address + "_top.png";
+        top_pipe_imgs.push(new_top_pipe);
+        promises.push(new Promise((resolve, reject) => {
+            new_top_pipe.onload = resolve;
+            new_top_pipe.onerror = reject;
+        }));
+
+        let new_bottom_pipe = new Image();
+        new_bottom_pipe.src = address + "_bottom.png";
+        bottom_pipe_imgs.push(new_bottom_pipe);
+        promises.push(new Promise((resolve, reject) => {
+            new_bottom_pipe.onload = resolve;
+            new_bottom_pipe.onerror = reject;
+        }));
+    });
 
     // Backgrounds
-    for (let index = 0; index < background_addresses.length; ++index) { // For all file addresses in the background_addresses, create new image objects and add them to the background_images array
-        new_bg = new Image();
-        new_bg.src = background_addresses[index];
-        background_images.push(new_bg);
+    for (let index = 0; index < 7; ++index) {
+        background_addresses.push("./assets/" + (index + 1) + ".png");
     }
+    background_addresses.forEach(address => {
+        let new_bg = new Image();
+        new_bg.src = address;
+        background_images.push(new_bg);
+        promises.push(new Promise((resolve, reject) => {
+            new_bg.onload = resolve;
+            new_bg.onerror = reject;
+        }));
+    });
 
     // Banners (clouds)
     top_banner = new Image();
     top_banner.src = top_banner_address;
+    promises.push(new Promise((resolve, reject) => {
+        top_banner.onload = resolve;
+        top_banner.onerror = reject;
+    }));
+
     bottom_banner = new Image();
     bottom_banner.src = bottom_banner_address;
+    promises.push(new Promise((resolve, reject) => {
+        bottom_banner.onload = resolve;
+        bottom_banner.onerror = reject;
+    }));
 
-    requestAnimationFrame(animate); // Starts animation loop
-    setInterval(update_banner_variance, 1000) // Changes cloud pos every second
-    document.addEventListener("keydown", cat_jump); 
+    // Numbers
+    for (let index = 0; index < 10; ++index) {
+        number_addresses.push("./assets/number_" + (index) + ".png");
+    }
+    number_addresses.forEach(address => {
+        let new_number = new Image();
+        new_number.src = address;
+        number_images.push(new_number);
+        promises.push(new Promise((resolve, reject) => {
+            new_number.onload = resolve;
+            new_number.onerror = reject;
+        }));
+    });
+
+    // Ensure all assets have laoded
+    Promise.all(promises).then(() => {
+        resolve();
+    }).catch(error => {
+        console.error("it worked on my pc, you issue rlly:", error);
+    });
 }
 
 // Create new frame
 function animate() {
     requestAnimationFrame(animate);
-
+    draw_assets();
     if (game_over == true) {
         return;
     }
+    gameplay_loop(); // Start initial gameplay loop
+}
 
+// Gameplay loop when cat is alive
+function gameplay_loop() {
     if (!place_pipe_interval) {
         place_pipe_interval = setInterval(place_paws, 2000); // Places pipes every 2000ms
     }
-    
-    context.clearRect(0,0, board_width, board_height);
 
-    // Scroll background (draw first as it is the background)
-    // Ensure there are at least two backgrounds (as this is the maximum that could be in the viewport at any time)
+    // Backgrounds
+    // Ensure 2 backgrounds in array
     while (background_array.length != 2) {
         place_background();
     }
-    // Moves all active backgrounds to the left (background_scroll_speed)
+    // Scroll left
     for (let index = 0; index < background_array.length; index++) {
         let bg = background_array[index];
         bg.x += background_scroll_speed;
-        context.drawImage(bg.img, bg.x, 0, background_width, background_height);
     }
-    // Remove backgrounds that finish scrolling
+    // Pop and replace finished images
     if (background_array[0].x < -background_width) {
         background_array.shift();
         place_background();
     }
 
-    // Redraw cat
-    cat_velocity += global_accel; // Sum the global_accel to the cat's velocity (where one unit time is one frame)
-    cat_velocity = Math.min(cat_velocity, max_vel); // Ensure max velocity is not exceeded
-    cat.y += cat_velocity; // Changes the position of the cat by the velocity (s = s0 + v) ;)
-    // Checks for  cat collision with canvas edges
+    // Cat
+    // Update velocity and y position
+    cat_velocity += global_accel; 
+    cat_velocity = Math.min(cat_velocity, max_vel); 
+    cat.y += cat_velocity; 
+    // Collision with canvas top/bottom
     if (cat.y < 0 - cat_height) {
         cat.y = board_height;
     }
     if (cat.y > board_height) {
         cat.y = 0 - cat_height;
     }
-    context.drawImage(cat_img, cat.x, cat.y, cat.width, cat.height);
 
-    // Move and redraw pipes
-    for (let index = 0; index < pipe_array.length; index++) { // For all pipes in pipe_array, set a new x value for it and redraw
+    // Pipes
+    for (let index = 0; index < pipe_array.length; index++) { 
         let pipe = pipe_array[index];
+        // Scroll left
         pipe.x += pipe_vel_x;
-        context.drawImage(pipe.img, pipe.x, pipe.y, pipe_width, pipe_height);
-        if (!pipe.passed && cat.x + (cat_width / 2) > pipe.x + (pipe_width / 2)) {
-            current_score += 1;
-            pipe.passed = true;
-        }
+        // Check for collisions with cat
         if (collision(cat, pipe)) {
             game_over = true;
-            console.log(current_score);
+            console.log(current_score); // Temp
+        }
+        // Update score if pipe is passed
+        if (pipe.passed == false && cat.x + (cat_width / 2) > pipe.x + (pipe_width / 2)) {
+            current_score += 1;
+            pipe.passed = true;
+            update_score_array();
+        }
+    }
+    // Pop pipes that finish scrolling
+    if (pipe_array.length > 0 && pipe_array[0].x < -pipe_width) {
+        pipe_array.shift();
+    }
+}
+
+// Draw all elements to canvas
+function draw_assets() {
+    // Clear board
+    context.clearRect(0,0, board_width, board_height);
+
+    // Background
+    for (let index = 0; index < background_array.length; index++) {
+        let bg = background_array[index];
+        context.drawImage(bg.img, bg.x, 0, background_width, background_height);
+    }
+
+    // Michi
+    context.drawImage(cat_img, cat.x, cat.y, cat.width, cat.height);
+
+    // Pipes
+    if (pipe_array.length > 0) {
+        for (let index = 0; index < pipe_array.length; index++) {
+            let pipe = pipe_array[index];
+            context.drawImage(pipe.img, pipe.x, pipe.y, pipe_width, pipe_height);
         }
     }
 
-    if (pipe_array.length > 0 && pipe_array[0].x < - pipe_width) {
-        pipe_array.shift();
-    }
-
-    // Draw banners
+    // Clouds/banners
     context.drawImage(top_banner, 0, 0 - variance_top, banner_width, banner_height);
     context.drawImage(bottom_banner, 0, board_height - banner_height + variance_bottom, banner_width, banner_height);
+
+    // Score
+    for (let index = 0; index < score_array.length; index++) {
+        var current_num = score_array[index];
+        context.drawImage(current_num.img, current_num.x_pos, score_display_y, current_num.img.width, number_height);
+    }
 }
 
 // Update banner variation (for position)
@@ -246,6 +334,7 @@ function place_paws() { // Needs: check for game over, check for passed pipes
     pipe_array.push(bottom_pipe);
 }
 
+// Push to background_array
 function place_background() {
     let bg_img = background_images[random_index(background_addresses.length)]; // Random image object
     let bg_x = 0 // Default position for first image (top left)
@@ -264,7 +353,38 @@ function place_background() {
     background_array.push(background);
 }
 
-// Handle "jump" events
+// Create score array (image and x pos)
+function update_score_array() {
+    score_array = []
+    var score_lst = Array.from(current_score.toString());
+    // Find pixel length
+    var score_width = 0;
+    for (let index = 0; index < score_lst.length; index++) {
+        var current_num = Number(score_lst[index]);
+        var number_width = number_images[current_num].width;
+        score_width += number_width;
+    }
+    // Each integer in score
+    for (let index = 0; index < score_lst.length; index++) {
+        var current_num = Number(score_lst[index]);
+        var number_width = number_images[current_num].width;
+        // X position for first number
+        if (score_array.length == 0) {
+            var x_pos = (board_width / 2) - (score_width / 2) // Centre of board - 1/2 total width
+        }
+        // X position for non-first numbers
+        else {
+            var x_pos = score_array[index - 1].x_pos + score_array[index - 1].img.width;
+        }
+        new_number = {
+            img : number_images[current_num],
+            x_pos : x_pos
+        }
+        score_array.push(new_number);
+    }
+    console.log(score_array)
+}
+// Handle "jump" events AND restart
 function cat_jump(event) {
     if (event.code == "Space") {
         cat_velocity = -3;
@@ -273,9 +393,10 @@ function cat_jump(event) {
         if (game_over) {
             cat.y = cat_y;
             pipe_array = [];
-            score = 0;
+            current_score = 0;
             background_array = [];
-            place_pipe_interval = 
+            place_pipe_interval = clearInterval(place_pipe_interval)
+            update_score_array();
             game_over = false;
         }
     }
@@ -311,7 +432,6 @@ function collision(cat, pipe) {
         cat.y + cat_hitbox.y2 > pipe.y) // Cat bottom < pipe top
 }
     
-
 // Return random index given an array_length
 function random_index(array_length) {
     return Math.floor(Math.random() * array_length);
