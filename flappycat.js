@@ -28,8 +28,8 @@ let cat = {
 
 // Pipe constants
 let pipe_array = []; // Pipes on screen
-let pipe_width = 64;
-let pipe_height = 512;
+let pipe_width = 66; // 64 old
+let pipe_height = 522; //512 old
 let pipe_x = board_width;
 let pipe_y = 0;
 let top_pipe_imgs = []; // Image objects
@@ -39,12 +39,12 @@ let pipe_addresses = get_pipe_names(); // Image addresses
 function get_pipe_names() {
     let i = "paw_pipe_";
     let pipe_addresses = [
-        i + "black_",
-        i + "grey_",
-        i + "orange_",
-        i + "orange_stripes_",
-        i + "white_",
-        i + "white_stripes_"
+        i + "black_3x_",
+        //i + "grey_3x_", // Assets don't exist yet!! <---------
+        //i + "orange_3x_",
+        //i + "orange_stripes_3x_",
+        //i + "white_3x_",
+        //i + "white_stripes_3x_"
     ];
     return pipe_addresses;
 }
@@ -221,7 +221,7 @@ function place_background() {
 
     // If already a background, positions x to the left of existing
     if (background_array.length > 0) { 
-        bg_x = background_array[0].x + background_width // Sets x value to 1 width away from the background infront of it
+        bg_x = background_array[0].x + background_width - 1 // Sets x value to 1 width away from the background infront of it (-1 removes gap that appears, I assume as a result of time inbetween operations)
     }
 
     // Background obj
@@ -231,7 +231,6 @@ function place_background() {
     }
 
     background_array.push(background);
-    console.log(background_array) // TEMP
 }
 
 // Handle "jump" events
