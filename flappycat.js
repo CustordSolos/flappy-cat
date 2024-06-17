@@ -1,25 +1,27 @@
 // Board constants
 let board;
-let board_width = 360;
-let board_height = 640;
+const board_width = 360;
+const board_height = 640;
 let context;
 
 // Score
 let high_score = 0;
-let cur_score = 0;
+let current_score = 0;
 let game_over = false;
 // Cat constants
-let cat_frames = [
+const cat_frames = [
     "./assets/cat_player_3x_1.png",
     "./assets/cat_player_3x_2.png",
     "./assets/cat_player_3x_3.png",
     "./assets/cat_player_3x_4.png"];
 let cat_images = [];
 let cat_frame_index = 0;
-let cat_frame_interval;
+const frame_interval = 100;
+const animation_duration = cat_frames.length * frame_interval;
+let cat_frame_interval = 100;
 let cat_img;
-let cat_width = 120;
-let cat_height = 120;
+const cat_width = 120;
+const cat_height = 120;
 let cat_x = board_width/8;
 let cat_y = board_height/2.3;
 let cat_velocity = 0;
@@ -29,12 +31,18 @@ let cat = {
     width : cat_width,
     height : cat_height
 }
+const cat_hitbox = {
+    x1 : 60,
+    x2 : 116,
+    y1 : 60,
+    y2 : 102
+}
+
 
 // Pipe constants
 let pipe_array = []; // Pipes on screen
-let pipe_width = 66; // 64 old
-let pipe_height = 522; //512 old
-let pipe_y = 0;
+const pipe_width = 66; 
+const pipe_height = 522; 
 let top_pipe_imgs = []; // Image objects
 let bottom_pipe_imgs = []; // Image objects
 let pipe_addresses = []; // Image addresses
@@ -42,6 +50,13 @@ let pipe_addresses = []; // Image addresses
 for (let index = 0; index < 8; ++index) {
     pipe_addresses.push("./assets/paw_pipe_3x_" + (index+1));
 }
+const paw_hitbox = {
+    x1 : 9,
+    x2 : 54,
+    y1 : 0,
+    y2 : 0
+}
+let place_pipe_interval;
 
 
 // Background constants
@@ -52,27 +67,27 @@ let background_images = []; // Image objects
 for (let index = 0; index < 7; ++index) {
     background_addresses.push("./assets/" + (index+1) + ".png");
 }
-let background_height = 640;
-let background_width = 1920;
-let background_scroll_speed = -0.3// Speed the backgrounds move left (-0.3)
+const background_height = 640;
+const background_width = 1920;
+const background_scroll_speed = -0.3
 
 // Top/bottom banner constants
-let top_banner_address = "./assets/cloud_top.png";
-let bottom_banner_address = "./assets/cloud_bottom.png";
-let banner_width = 360;
-let banner_height = 48;
-let banner_y_variance = 5; // How many pixels it can deviate from it's fixed position
+const top_banner_address = "./assets/cloud_top.png";
+const bottom_banner_address = "./assets/cloud_bottom.png";
+const banner_width = 360;
+const banner_height = 48;
+const banner_y_variance = 5; // How many pixels it can deviate from it's fixed position
 let top_banner; // Will be an image object
 let bottom_banner; // ^^ 
 let temp_counter = 0; // Place holder, used in shaking the clouds
 let variance_top = 0; // Initial variance
 let variance_bottom = 0; // ^^
-let banner_variance_delay = 700; // Delay in ms for cloud movement
+const banner_variance_delay = 700; // Delay in ms for cloud movement
 
 // Physics constants (super advanced physics engine)
-let pipe_vel_x = -0.8; // Scroll speed for pipes (paws)
-let global_accel = 0.06; // G for cat
-let max_vel = 10;
+const pipe_vel_x = -0.8; // Scroll speed for pipes (paws)
+const global_accel = 0.06; // G for cat
+const max_vel = 10;
 
 // NASA PC required to reach here \/\/
 window.onload = function() {
@@ -123,13 +138,22 @@ window.onload = function() {
     bottom_banner.src = bottom_banner_address;
 
     requestAnimationFrame(animate); // Starts animation loop
-    setInterval(place_paws, 2000); // Places pipes every 2000ms
+    setInterval(update_banner_variance, 1000) // Changes cloud pos every second
     document.addEventListener("keydown", cat_jump); 
 }
 
 // Create new frame
 function animate() {
     requestAnimationFrame(animate);
+
+    if (game_over == true) {
+        return;
+    }
+
+    if (!place_pipe_interval) {
+        place_pipe_interval = setInterval(place_paws, 2000); // Places pipes every 2000ms
+    }
+    
     context.clearRect(0,0, board_width, board_height);
 
     // Scroll background (draw first as it is the background)
@@ -166,28 +190,30 @@ function animate() {
     for (let index = 0; index < pipe_array.length; index++) { // For all pipes in pipe_array, set a new x value for it and redraw
         let pipe = pipe_array[index];
         pipe.x += pipe_vel_x;
-        if (pipe.passed == false && cat.x + (cat_width / 2) > pipe.x + (pipe_width / 2)) {
-            cur_score += 1;
-            pipe.passed = true;
-            console.log(cur_score); // Temp
-        }
         context.drawImage(pipe.img, pipe.x, pipe.y, pipe_width, pipe_height);
+        if (!pipe.passed && cat.x + (cat_width / 2) > pipe.x + (pipe_width / 2)) {
+            current_score += 1;
+            pipe.passed = true;
+        }
+        if (collision(cat, pipe)) {
+            game_over = true;
+            console.log(current_score);
+        }
     }
 
     if (pipe_array.length > 0 && pipe_array[0].x < - pipe_width) {
         pipe_array.shift();
     }
 
-    // Redraw banners last (as they should be highest z-index)
-    temp_counter += 1;
-    // Change variance at interval
-    if (temp_counter > banner_variance_delay / 6) { // This needs redesigning lol, shitty work around for a timer, is entirely reliant on fps
-        temp_counter = 0
-        variance_top = Math.floor(Math.random() * banner_y_variance);
-        variance_bottom = Math.floor(Math.random() * banner_y_variance);
-    }
+    // Draw banners
     context.drawImage(top_banner, 0, 0 - variance_top, banner_width, banner_height);
     context.drawImage(bottom_banner, 0, board_height - banner_height + variance_bottom, banner_width, banner_height);
+}
+
+// Update banner variation (for position)
+function update_banner_variance() {
+    variance_top = Math.floor(Math.random() * banner_y_variance);
+    variance_bottom = Math.floor(Math.random() * banner_y_variance);
 }
 
 // Manifest cat grippers
@@ -197,7 +223,7 @@ function place_paws() { // Needs: check for game over, check for passed pipes
         return;
     }
     // Set height/gap of paw pair
-    let random_pipe_y = pipe_y - pipe_height/4- Math.random()*(pipe_height/2);
+    let random_pipe_y = 0 - pipe_height/4- Math.random()*(pipe_height/2);
     let paw_gap = board.height/4;
 
     // Top pipe obj
@@ -243,14 +269,20 @@ function cat_jump(event) {
     if (event.code == "Space") {
         cat_velocity = -3;
         animate_cat_flight();
+
+        if (game_over) {
+            cat.y = cat_y;
+            pipe_array = [];
+            score = 0;
+            background_array = [];
+            place_pipe_interval = 
+            game_over = false;
+        }
     }
 }
 
 // Animation for cat flap
 function animate_cat_flight() {
-    let frame_interval = 100;
-    let animation_duration = cat_frames.length * frame_interval;
-
     // Clear interval if not in animation, else return (letting old animation finish)
     if (cat_img == cat_images[0]) {
         clearInterval(cat_frame_interval);
@@ -265,12 +297,20 @@ function animate_cat_flight() {
         cat_frame_index += 1;
     }, frame_interval);
 
-    // GPT - Stop the animation after one cycle
+    // Stop the animation after one animation duration
     setTimeout(() => {
         clearInterval(cat_frame_interval);
         cat_img = cat_images[0]; // Reset to the first frame
     }, animation_duration);
 }
+
+function collision(cat, pipe) {
+    return (cat.x + cat_hitbox.x2 > pipe.x + paw_hitbox.x1 && // Cat right > pipe left
+        cat.x + cat_hitbox.x1 < pipe.x + paw_hitbox.x2 && // Cat left < pipe right
+        cat.y + cat_hitbox.y1 < pipe.y + pipe_height && // Cat top > pipe bottom I DON'T KNOW HOW THESE ARE + WHEN Y IS -VE
+        cat.y + cat_hitbox.y2 > pipe.y) // Cat bottom < pipe top
+}
+    
 
 // Return random index given an array_length
 function random_index(array_length) {
