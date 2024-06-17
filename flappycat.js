@@ -4,6 +4,10 @@ let board_width = 360;
 let board_height = 640;
 let context;
 
+// Score
+let high_score = 0;
+let cur_score = 0;
+let game_over = false;
 // Cat constants
 let cat_frames = [
     "./assets/cat_player_3x_1.png",
@@ -30,7 +34,6 @@ let cat = {
 let pipe_array = []; // Pipes on screen
 let pipe_width = 66; // 64 old
 let pipe_height = 522; //512 old
-let pipe_x = board_width;
 let pipe_y = 0;
 let top_pipe_imgs = []; // Image objects
 let bottom_pipe_imgs = []; // Image objects
@@ -142,7 +145,7 @@ function animate() {
     }
     // Remove backgrounds that finish scrolling
     if (background_array[0].x < -background_width) {
-        background_array.shift()
+        background_array.shift();
         place_background();
     }
 
@@ -163,6 +166,11 @@ function animate() {
     for (let index = 0; index < pipe_array.length; index++) { // For all pipes in pipe_array, set a new x value for it and redraw
         let pipe = pipe_array[index];
         pipe.x += pipe_vel_x;
+        if (pipe.passed == false && cat.x + (cat_width / 2) > pipe.x + (pipe_width / 2)) {
+            cur_score += 1;
+            pipe.passed = true;
+            console.log(cur_score); // Temp
+        }
         context.drawImage(pipe.img, pipe.x, pipe.y, pipe_width, pipe_height);
     }
 
@@ -184,6 +192,10 @@ function animate() {
 
 // Manifest cat grippers
 function place_paws() { // Needs: check for game over, check for passed pipes
+    // Returns if user has game overed
+    if (game_over == true) {
+        return;
+    }
     // Set height/gap of paw pair
     let random_pipe_y = pipe_y - pipe_height/4- Math.random()*(pipe_height/2);
     let paw_gap = board.height/4;
@@ -192,19 +204,18 @@ function place_paws() { // Needs: check for game over, check for passed pipes
     let top_pipe_img = top_pipe_imgs[random_index(pipe_addresses.length)] // Set random image
     let top_pipe = {
         img: top_pipe_img,
-        x : pipe_x,
-        y : random_pipe_y,
-        // Needs a passed check here <----
+        x: board_width,
+        y: random_pipe_y,
+        passed: false
     }
     pipe_array.push(top_pipe);
 
-    // Bottom pipe obj
+    // Bottom pipe obj (no passed bool, only need to check 1 pipe not both)
     let bottom_pipe_img = bottom_pipe_imgs[random_index(pipe_addresses.length)]; // Set random image
     let bottom_pipe = {
-        img: bottom_pipe_img,
-        x : pipe_x,
+        img : bottom_pipe_img,
+        x : board_width,
         y : random_pipe_y + pipe_height + paw_gap,
-        // Needs a passed check here <----
     }
     pipe_array.push(bottom_pipe);
 }
@@ -240,12 +251,15 @@ function animate_cat_flight() {
     let frame_interval = 100;
     let animation_duration = cat_frames.length * frame_interval;
 
-    // Clear any existing intervals
-    if (cat_frame_interval) {
+    // Clear interval if not in animation, else return (letting old animation finish)
+    if (cat_img == cat_images[0]) {
         clearInterval(cat_frame_interval);
     }
+    else {
+        return;
+    }
 
-    cat_frame_index = 1; // Initial flight frame is the second element (frame) in the cat_frames array (contains image objects)
+    cat_frame_index = 1; // Start animation at 2nd frame
     cat_frame_interval = setInterval(() => {
         cat_img = cat_images[cat_frame_index];
         cat_frame_index += 1;
