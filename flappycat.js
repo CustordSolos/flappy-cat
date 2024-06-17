@@ -246,7 +246,7 @@ function cat_jump(event) {
     }
 }
 
-// Animation for cat "jump" - I grabbed this from GPT, idk how it works yet, needs fine tuning <-----------------
+// Animation for cat flap
 function animate_cat_flight() {
     let frame_interval = 100;
     let animation_duration = cat_frames.length * frame_interval;
