@@ -34,26 +34,19 @@ let pipe_x = board_width;
 let pipe_y = 0;
 let top_pipe_imgs = []; // Image objects
 let bottom_pipe_imgs = []; // Image objects
-let pipe_addresses = get_pipe_names(); // Image addresses
-// Return base pipe names array (without top.png/bottom.png)
-function get_pipe_names() {
-    let i = "paw_pipe_";
-    let pipe_addresses = [
-        i + "black_3x_",
-        //i + "grey_3x_", // Assets don't exist yet!! <---------
-        //i + "orange_3x_",
-        //i + "orange_stripes_3x_",
-        //i + "white_3x_",
-        //i + "white_stripes_3x_"
-    ];
-    return pipe_addresses;
+let pipe_addresses = []; // Image addresses
+// Pipe file names (without top/bottom)
+for (let index = 0; index < 8; ++index) {
+    pipe_addresses.push("./assets/paw_pipe_3x_" + (index+1));
 }
+
 
 // Background constants
 let background_array = []; // Backgrounds on screen
-let background_addresses = [] // Image addresses (shit practice but :D)
+let background_addresses = []
 let background_images = []; // Image objects
-for (let index = 0; index < 7; ++index) { // Backgrounds 1->7
+// Background file names 1 -> 7
+for (let index = 0; index < 7; ++index) {
     background_addresses.push("./assets/" + (index+1) + ".png");
 }
 let background_height = 640;
@@ -74,8 +67,9 @@ let variance_bottom = 0; // ^^
 let banner_variance_delay = 700; // Delay in ms for cloud movement
 
 // Physics constants (super advanced physics engine)
-pipe_vel_x = -0.8; // Scroll speed for pipes (paws)
-global_accel = 0.06; // G for cat
+let pipe_vel_x = -0.8; // Scroll speed for pipes (paws)
+let global_accel = 0.06; // G for cat
+let max_vel = 10;
 
 // NASA PC required to reach here \/\/
 window.onload = function() {
@@ -101,12 +95,12 @@ window.onload = function() {
         for (let index = 0; index < pipe_addresses.length; ++index) { // Recall that pipe_addresses is an array holding the file names
             // Top pipe images
             new_top_pipe = new Image();
-            new_top_pipe.src = "./assets/" + pipe_addresses[index] + "top.png"; // top.png ...
+            new_top_pipe.src = pipe_addresses[index] + "_top.png"; // top.png ...
             top_pipe_imgs.push(new_top_pipe);
 
             // Bottom pipe images
             new_bottom_pipe = new Image();
-            new_bottom_pipe.src = "./assets/" + pipe_addresses[index] + "bottom.png"; // bottom.png ...
+            new_bottom_pipe.src = pipe_addresses[index] + "_bottom.png"; // bottom.png ...
             bottom_pipe_imgs.push(new_bottom_pipe);
         }
         return [top_pipe_imgs, bottom_pipe_imgs];
@@ -140,28 +134,31 @@ function animate() {
     while (background_array.length != 2) {
         place_background();
     }
-    if (background_array[0].x < -background_width) {
-        let temp_array = [] // Need to use temp_array, acting on the array itself exhibits weird behaviour, you can try it if you want
-        temp_array = background_array.slice(1); // ^^ Just change this to background_array = ...
-        background_array = temp_array
-        place_background();
-    }
-    // If a background has finished scrolling, pop it from the array and ammend a new one to the end
     // Moves all active backgrounds to the left (background_scroll_speed)
     for (let index = 0; index < background_array.length; index++) {
         let bg = background_array[index];
         bg.x += background_scroll_speed;
         context.drawImage(bg.img, bg.x, 0, background_width, background_height);
     }
+    // Remove backgrounds that finish scrolling
+    if (background_array[0].x < -background_width) {
+        //let temp_array = [] // Need to use temp_array, acting on the array itself exhibits weird behaviour, you can try it if you want
+        //temp_array = background_array.slice(1); // ^^ Just change this to background_array = ...
+        //background_array = temp_array
+        background_array = background_array.shift()
+        place_background();
+    }
 
     // Redraw cat
     cat_velocity += global_accel; // Sum the global_accel to the cat's velocity (where one unit time is one frame)
+    cat_velocity = Math.min(cat_velocity, max_vel); // Ensure max velocity is not exceeded
     cat.y += cat_velocity; // Changes the position of the cat by the velocity (s = s0 + v) ;)
-    // Checks for collision with the base of the canvas (currently acts as a floor, and stops flight animation)
-    if (cat.y > board_height - cat_height) {
-        cat.y = board_height - cat_height;
-        cat_img = cat_images[0];
-        clearInterval(cat_frame_interval);
+    // Checks for  cat collision with canvas edges
+    if (cat.y < 0 - cat_height) {
+        cat.y = board_height;
+    }
+    if (cat.y > board_height) {
+        cat.y = 0 - cat_height;
     }
     context.drawImage(cat_img, cat.x, cat.y, cat.width, cat.height);
 
@@ -169,7 +166,11 @@ function animate() {
     for (let index = 0; index < pipe_array.length; index++) { // For all pipes in pipe_array, set a new x value for it and redraw
         let pipe = pipe_array[index];
         pipe.x += pipe_vel_x;
-        context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
+        context.drawImage(pipe.img, pipe.x, pipe.y, pipe_width, pipe_height);
+    }
+
+    if (pipe_array.length > 0 && pipe_array[0].x < - pipe_width) {
+        pipe_array.shift();
     }
 
     // Redraw banners last (as they should be highest z-index)
@@ -196,8 +197,6 @@ function place_paws() { // Needs: check for game over, check for passed pipes
         img: top_pipe_img,
         x : pipe_x,
         y : random_pipe_y,
-        width : pipe_width,
-        height : pipe_height
         // Needs a passed check here <----
     }
     pipe_array.push(top_pipe);
@@ -208,8 +207,6 @@ function place_paws() { // Needs: check for game over, check for passed pipes
         img: bottom_pipe_img,
         x : pipe_x,
         y : random_pipe_y + pipe_height + paw_gap,
-        width : pipe_width,
-        height : pipe_height
         // Needs a passed check here <----
     }
     pipe_array.push(bottom_pipe);
@@ -243,9 +240,10 @@ function cat_jump(event) {
 
 // Animation for cat "jump" - I grabbed this from GPT, idk how it works yet, needs fine tuning <-----------------
 function animate_cat_flight() {
-    let animation_duration = cat_frames.length * 100; // GPT - Duration for one cycle of animation (this 100 should really be a constant)
+    let frame_interval = 100;
+    let animation_duration = cat_frames.length * frame_interval;
 
-    // GPT - Clear any existing intervals
+    // Clear any existing intervals
     if (cat_frame_interval) {
         clearInterval(cat_frame_interval);
     }
@@ -253,8 +251,8 @@ function animate_cat_flight() {
     cat_frame_index = 1; // Initial flight frame is the second element (frame) in the cat_frames array (contains image objects)
     cat_frame_interval = setInterval(() => {
         cat_img = cat_images[cat_frame_index];
-        cat_frame_index = (cat_frame_index + 1) % cat_frames.length;
-    }, 100); // 100ms between frames
+        cat_frame_index += 1;
+    }, frame_interval);
 
     // GPT - Stop the animation after one cycle
     setTimeout(() => {
