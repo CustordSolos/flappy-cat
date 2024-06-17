@@ -142,10 +142,7 @@ function animate() {
     }
     // Remove backgrounds that finish scrolling
     if (background_array[0].x < -background_width) {
-        //let temp_array = [] // Need to use temp_array, acting on the array itself exhibits weird behaviour, you can try it if you want
-        //temp_array = background_array.slice(1); // ^^ Just change this to background_array = ...
-        //background_array = temp_array
-        background_array = background_array.shift()
+        background_array.shift()
         place_background();
     }
 
