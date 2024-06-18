@@ -1,7 +1,7 @@
-// Board 
-let board;
-const board_width = 360;
-const board_height = 640;
+// Canvas 
+let canvas;
+const canvas_width = 360;
+const canvas_height = 640;
 let context;
 let completed_loading = false;
 
@@ -9,6 +9,15 @@ let completed_loading = false;
 let high_score = 0;
 let current_score = 0;
 let game_over = false;
+
+// Scoreboard
+let scoreboard_images = []
+let scoreboard = {
+    img : "",
+    x : 0,
+    y : 0
+}
+const scoreboard_target_y = (canvas_height / 2) - 550 // 550 is centre of screen in png
 
 // Cat
 const cat_frames = [
@@ -24,8 +33,8 @@ let cat_frame_interval = 100;
 let cat_img;
 const cat_width = 120;
 const cat_height = 120;
-let cat_x = board_width/8;
-let cat_y = board_height/2.3;
+let cat_x = canvas_width/8;
+let cat_y = canvas_height/2.3;
 let cat_velocity = 0;
 let cat = {
     x : cat_x, 
@@ -39,6 +48,9 @@ const cat_hitbox = {
     y1 : 60,
     y2 : 102
 }
+let cat_rotation = 0;
+let cat_rotational_vel = 0;
+const cat_rotational_accel = 0.001;
 
 // Pipes
 let pipe_array = []; // Pipes on screen
@@ -62,6 +74,8 @@ let background_images = []; // Image objects
 const background_height = 640;
 const background_width = 1920;
 const background_scroll_speed = -0.3
+const flash_intensity = 0.8;
+let current_flash_intensity = flash_intensity;
 
 // Top/bottom banner
 const top_banner_address = "./assets/cloud_top.png";
@@ -93,10 +107,10 @@ const max_vel = 10;
 
 // NASA PC required to reach here \/\/
 window.onload = async function() {
-    board = document.getElementById("board");
-    board.height = board_height;
-    board.width = board_width;
-    context = board.getContext("2d");
+    canvas = document.getElementById("canvas");
+    canvas.height = canvas_height;
+    canvas.width = canvas_width;
+    context = canvas.getContext("2d");
     await new Promise((resolve, reject) => {
         load_and_push_assets(resolve); // Pass resolve function to load_and_push_assets
     });
@@ -189,6 +203,21 @@ function load_and_push_assets(resolve) {
         }));
     });
 
+    // Scoreboard
+    var scoreboard_addresses = [];
+    for (let index = 1; index < 3; ++index) {
+        scoreboard_addresses.push("./assets/scoreboard_" + (index) + ".png");
+    }
+    scoreboard_addresses.forEach(address => {
+        let new_board = new Image();
+        new_board.src = address;
+        scoreboard_images.push(new_board);
+        promises.push(new Promise((resolve, reject) => {
+            new_board.onload = resolve;
+            new_board.onerror = reject;
+        }));
+    });
+
     // Ensure all assets have laoded
     Promise.all(promises).then(() => {
         resolve();
@@ -202,9 +231,11 @@ function animate() {
     requestAnimationFrame(animate);
     draw_assets();
     if (game_over == true) {
-        return;
+        move_scoreboard();
     }
-    gameplay_loop(); // Start initial gameplay loop
+    else {
+        gameplay_loop(); // Start initial gameplay loop
+    }
 }
 
 // Gameplay loop when cat is alive
@@ -236,9 +267,9 @@ function gameplay_loop() {
     cat.y += cat_velocity; 
     // Collision with canvas top/bottom
     if (cat.y < 0 - cat_height) {
-        cat.y = board_height;
+        cat.y = canvas_height;
     }
-    if (cat.y > board_height) {
+    if (cat.y > canvas_height) {
         cat.y = 0 - cat_height;
     }
 
@@ -250,7 +281,7 @@ function gameplay_loop() {
         // Check for collisions with cat
         if (collision(cat, pipe)) {
             game_over = true;
-            console.log(current_score); // Temp
+            animate_scoreboard();
         }
         // Update score if pipe is passed
         if (pipe.passed == false && cat.x + (cat_width / 2) > pipe.x + (pipe_width / 2)) {
@@ -265,19 +296,20 @@ function gameplay_loop() {
     }
 }
 
+function move_scoreboard() {
+    scoreboard.y += 5;
+    scoreboard.y = Math.min(scoreboard.y, scoreboard_target_y);
+}
 // Draw all elements to canvas
 function draw_assets() {
-    // Clear board
-    context.clearRect(0,0, board_width, board_height);
+    // Clear canvas
+    context.clearRect(0,0, canvas_width, canvas_height);
 
     // Background
     for (let index = 0; index < background_array.length; index++) {
         let bg = background_array[index];
         context.drawImage(bg.img, bg.x, 0, background_width, background_height);
     }
-
-    // Michi
-    context.drawImage(cat_img, cat.x, cat.y, cat.width, cat.height);
 
     // Pipes
     if (pipe_array.length > 0) {
@@ -287,15 +319,52 @@ function draw_assets() {
         }
     }
 
+    // Michi
+    if (game_over) {
+        cat_rotational_vel = Math.min(cat_rotational_vel + cat_rotational_accel, 0.2);
+        cat_rotation = Math.min(cat_rotation + cat_rotational_vel, 0.5)
+        cat_velocity += 0.2; 
+        cat_velocity = Math.min(cat_velocity, max_vel); 
+        cat.y += cat_velocity; 
+        drawRotatedImage(cat_img, cat.x, cat.y, cat.width, cat.height, cat_rotation * Math.PI); // Angle is in radians
+    }
+    else {
+        context.drawImage(cat_img, cat.x, cat.y, cat.width, cat.height);
+    }
+
+
     // Clouds/banners
     context.drawImage(top_banner, 0, 0 - variance_top, banner_width, banner_height);
-    context.drawImage(bottom_banner, 0, board_height - banner_height + variance_bottom, banner_width, banner_height);
+    context.drawImage(bottom_banner, 0, canvas_height - banner_height + variance_bottom, banner_width, banner_height);
 
     // Score
     for (let index = 0; index < score_array.length; index++) {
         var current_num = score_array[index];
         context.drawImage(current_num.img, current_num.x_pos, score_display_y, current_num.img.width, number_height);
     }
+
+    if (game_over) {
+        context.fillRect(0, 0, canvas_width, canvas_height);
+        current_flash_intensity -= 0.02
+        context.fillStyle = `rgba(0, 0, 0, ${current_flash_intensity})`;
+        context.drawImage(scoreboard.img, scoreboard.x, scoreboard.y, scoreboard.img.width, scoreboard.img.height);
+    }
+}
+
+function animate_scoreboard() {
+    scoreboard.img = scoreboard_images[0];
+    scoreboard.y = - scoreboard.img.height;
+    scoreboard.x = (canvas_width / 2) - (scoreboard.img.width / 2)
+    let scoreboard_frame_index = 0; 
+    let scoreboard_frame_interval = setInterval(() => {
+        scoreboard.img = scoreboard_images[scoreboard_frame_index];
+        scoreboard_frame_index += 1;
+    }, frame_interval);
+
+    // Stop the animation after one animation duration
+    setTimeout(() => {
+        clearInterval(scoreboard_frame_interval);
+    }, 200);
 }
 
 // Update banner variation (for position)
@@ -312,13 +381,13 @@ function place_paws() { // Needs: check for game over, check for passed pipes
     }
     // Set height/gap of paw pair
     let random_pipe_y = 0 - pipe_height/4- Math.random()*(pipe_height/2);
-    let paw_gap = board.height/4;
+    let paw_gap = canvas.height/4;
 
     // Top pipe obj
     let top_pipe_img = top_pipe_imgs[random_index(pipe_addresses.length)] // Set random image
     let top_pipe = {
         img: top_pipe_img,
-        x: board_width,
+        x: canvas_width,
         y: random_pipe_y,
         passed: false
     }
@@ -328,7 +397,7 @@ function place_paws() { // Needs: check for game over, check for passed pipes
     let bottom_pipe_img = bottom_pipe_imgs[random_index(pipe_addresses.length)]; // Set random image
     let bottom_pipe = {
         img : bottom_pipe_img,
-        x : board_width,
+        x : canvas_width,
         y : random_pipe_y + pipe_height + paw_gap,
     }
     pipe_array.push(bottom_pipe);
@@ -370,7 +439,7 @@ function update_score_array() {
         var number_width = number_images[current_num].width;
         // X position for first number
         if (score_array.length == 0) {
-            var x_pos = (board_width / 2) - (score_width / 2) // Centre of board - 1/2 total width
+            var x_pos = (canvas_width / 2) - (score_width / 2) // Centre of canvas - 1/2 total width
         }
         // X position for non-first numbers
         else {
@@ -387,19 +456,28 @@ function update_score_array() {
 // Handle "jump" events AND restart
 function cat_jump(event) {
     if (event.code == "Space") {
-        cat_velocity = -3;
-        animate_cat_flight();
-
-        if (game_over) {
-            cat.y = cat_y;
-            pipe_array = [];
-            current_score = 0;
-            background_array = [];
-            place_pipe_interval = clearInterval(place_pipe_interval)
-            update_score_array();
-            game_over = false;
+        if (!game_over) {
+            cat_velocity = -3;
+            animate_cat_flight();
+        } else if (game_over && cat.y > canvas_height) {
+            reset_gameplay_loop();
         }
     }
+}
+// Reset vars for gameplay loop
+function reset_gameplay_loop() {
+    cat.y = cat_y;
+    cat_velocity = 0;
+    pipe_array = [];
+    current_score = 0;
+    background_array = [];
+    place_pipe_interval = clearInterval(place_pipe_interval);
+    update_score_array();
+    cat_rotation = 0;
+    cat_rotational_vel = 0;
+    current_flash_intensity = flash_intensity;
+    scoreboard.y = -scoreboard.img.height
+    game_over = false;
 }
 
 // Animation for cat flap
@@ -424,6 +502,16 @@ function animate_cat_flight() {
         cat_img = cat_images[0]; // Reset to the first frame
     }, animation_duration);
 }
+
+// Function to draw the rotated image
+function drawRotatedImage(img, x, y, width, height, angle) {
+    context.save();
+    context.translate(x + width / 2, y + height / 2);
+    context.rotate(angle);
+    context.drawImage(img, -width / 2, -height / 2, width, height);
+    context.restore();
+}
+
 
 function collision(cat, pipe) {
     return (cat.x + cat_hitbox.x2 > pipe.x + paw_hitbox.x1 && // Cat right > pipe left
