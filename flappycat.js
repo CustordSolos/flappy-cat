@@ -50,7 +50,7 @@ const cat_hitbox = {
 }
 let cat_rotation = 0;
 let cat_rotational_vel = 0;
-const cat_rotational_accel = 0.001;
+const cat_rotational_accel = 0.0003;
 
 // Pipes
 let pipe_array = []; // Pipes on screen
@@ -59,11 +59,11 @@ const pipe_height = 522;
 let top_pipe_imgs = []; // Image objects
 let bottom_pipe_imgs = []; // Image objects
 let pipe_addresses = []; // Image addresses
-const paw_hitbox = {
+const paw_hitbox = { // Y value changes don't work as the paws are either top or bottom (need y1 top = y2 bottom...)
     x1 : 9,
     x2 : 54,
     y1 : 0,
-    y2 : 0
+    y2 : pipe_height
 }
 let place_pipe_interval;
 
@@ -98,7 +98,7 @@ const number_height = 45;
 const score_display_y = 80
 
 // Physics (super advanced physics engine)
-const pipe_vel_x = -0.8; // Scroll speed for pipes (paws)
+const pipe_vel_x = -1; // Scroll speed for pipes (paws)
 const global_accel = 0.06; // G for cat
 const max_vel = 10;
 
@@ -205,9 +205,10 @@ function load_and_push_assets(resolve) {
 
     // Scoreboard
     var scoreboard_addresses = [];
-    for (let index = 1; index < 3; ++index) {
-        scoreboard_addresses.push("./assets/scoreboard_" + (index) + ".png");
-    }
+    // for (let index = 1; index <= scoreboard_frames; ++index) {
+    //    scoreboard_addresses.push("./assets/scoreboard_" + (index) + ".png");
+    //}
+    scoreboard_addresses.push("./assets/scoreboard_lilly.png")
     scoreboard_addresses.forEach(address => {
         let new_board = new Image();
         new_board.src = address;
@@ -241,7 +242,7 @@ function animate() {
 // Gameplay loop when cat is alive
 function gameplay_loop() {
     if (!place_pipe_interval) {
-        place_pipe_interval = setInterval(place_paws, 2000); // Places pipes every 2000ms
+        place_pipe_interval = setInterval(place_paws, 1700); // Places pipes every 2000ms
     }
 
     // Backgrounds
@@ -322,7 +323,7 @@ function draw_assets() {
     // Michi
     if (game_over) {
         cat_rotational_vel = Math.min(cat_rotational_vel + cat_rotational_accel, 0.2);
-        cat_rotation = Math.min(cat_rotation + cat_rotational_vel, 0.5)
+        cat_rotation = Math.min(cat_rotation + cat_rotational_vel, 0.4)
         cat_velocity += 0.2; 
         cat_velocity = Math.min(cat_velocity, max_vel); 
         cat.y += cat_velocity; 
@@ -346,7 +347,7 @@ function draw_assets() {
     if (game_over) {
         context.fillRect(0, 0, canvas_width, canvas_height);
         current_flash_intensity -= 0.02
-        context.fillStyle = `rgba(0, 0, 0, ${current_flash_intensity})`;
+        context.fillStyle = `rgba(255, 255, 255, ${current_flash_intensity})`;
         context.drawImage(scoreboard.img, scoreboard.x, scoreboard.y, scoreboard.img.width, scoreboard.img.height);
     }
 }
@@ -364,7 +365,7 @@ function animate_scoreboard() {
     // Stop the animation after one animation duration
     setTimeout(() => {
         clearInterval(scoreboard_frame_interval);
-    }, 200);
+    }, 100);
 }
 
 // Update banner variation (for position)
@@ -381,7 +382,7 @@ function place_paws() { // Needs: check for game over, check for passed pipes
     }
     // Set height/gap of paw pair
     let random_pipe_y = 0 - pipe_height/4- Math.random()*(pipe_height/2);
-    let paw_gap = canvas.height/4;
+    let paw_gap = 140;
 
     // Top pipe obj
     let top_pipe_img = top_pipe_imgs[random_index(pipe_addresses.length)] // Set random image
@@ -516,8 +517,8 @@ function drawRotatedImage(img, x, y, width, height, angle) {
 function collision(cat, pipe) {
     return (cat.x + cat_hitbox.x2 > pipe.x + paw_hitbox.x1 && // Cat right > pipe left
         cat.x + cat_hitbox.x1 < pipe.x + paw_hitbox.x2 && // Cat left < pipe right
-        cat.y + cat_hitbox.y1 < pipe.y + pipe_height && // Cat top > pipe bottom I DON'T KNOW HOW THESE ARE + WHEN Y IS -VE
-        cat.y + cat_hitbox.y2 > pipe.y) // Cat bottom < pipe top
+        cat.y + cat_hitbox.y1 < pipe.y + paw_hitbox.y2 && // Cat top > pipe bottom
+        cat.y + cat_hitbox.y2 > pipe.y + paw_hitbox.y1) // Cat bottom < pipe top
 }
     
 // Return random index given an array_length
