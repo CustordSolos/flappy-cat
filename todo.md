@@ -12,4 +12,4 @@
 - Menu buttons
 - Title
 - Alter cat design to have smaller wings
-- Cat holding scoreboard
+- Scoreboard animated cat (blinking, bobbing, looking down etc)
