@@ -17,7 +17,8 @@ let scoreboard = {
     x : 0,
     y : 0
 }
-const scoreboard_target_y = (canvas_height / 2) - 550 // 550 is centre of screen in png
+const scoreboard_target_y = (canvas_height / 2) - 1100 // 1100 is centre of screen in png
+let scoreboard_drop_animation_completed = false;
 
 // Cat
 const cat_frames = [
@@ -76,6 +77,7 @@ const background_width = 1920;
 const background_scroll_speed = -0.3
 const flash_intensity = 0.8;
 let current_flash_intensity = flash_intensity;
+let flash_completed = false;
 
 // Top/bottom banner
 const top_banner_address = "./assets/cloud_top.png";
@@ -118,7 +120,10 @@ window.onload = async function() {
 
     requestAnimationFrame(animate); // Calls animate at a rate matching refresh rate
     setInterval(update_banner_variance, 1000) // Changes cloud pos every second
-    document.addEventListener("keydown", cat_jump); 
+    document.addEventListener("keydown", cat_jump);
+    context.font = '33px "Playwrite IT Moderna"';
+    context.fillStyle = 'white';
+    context.textAlign = 'center';
 }
 
 // Load all images
@@ -214,7 +219,13 @@ function load_and_push_assets(resolve) {
         new_board.src = address;
         scoreboard_images.push(new_board);
         promises.push(new Promise((resolve, reject) => {
-            new_board.onload = resolve;
+            new_board.onload = () => {
+                if (!scoreboard.img) {
+                    scoreboard.img = new_board;
+                    scoreboard.y = -scoreboard.img.height;
+                }
+                resolve();
+            };
             new_board.onerror = reject;
         }));
     });
@@ -231,11 +242,67 @@ function load_and_push_assets(resolve) {
 function animate() {
     requestAnimationFrame(animate);
     draw_assets();
-    if (game_over == true) {
-        move_scoreboard();
+    if (!game_over) {
+        gameplay_loop(); // Start initial gameplay loop
+    }
+}
+
+// Draw all elements to canvas
+function draw_assets() {
+    // Clear canvas
+    context.clearRect(0,0, canvas_width, canvas_height);
+
+    // Background
+    for (let index = 0; index < background_array.length; index++) {
+        let bg = background_array[index];
+        context.drawImage(bg.img, bg.x, 0, background_width, background_height);
+    }
+
+    // Pipes
+    if (pipe_array.length > 0) {
+        for (let index = 0; index < pipe_array.length; index++) {
+            let pipe = pipe_array[index];
+            context.drawImage(pipe.img, pipe.x, pipe.y, pipe_width, pipe_height);
+        }
+    }
+
+    // Michi
+    if (game_over) {
+        cat_rotational_vel = Math.min(cat_rotational_vel + cat_rotational_accel, 0.2);
+        cat_rotation = Math.min(cat_rotation + cat_rotational_vel, 0.4)
+        cat_velocity += 0.2; 
+        cat_velocity = Math.min(cat_velocity, max_vel); 
+        cat.y += cat_velocity; 
+        drawRotatedImage(cat_img, cat.x, cat.y, cat.width, cat.height, cat_rotation * Math.PI); // Angle is in radians
     }
     else {
-        gameplay_loop(); // Start initial gameplay loop
+        context.drawImage(cat_img, cat.x, cat.y, cat.width, cat.height);
+    }
+
+    // Clouds/banners
+    context.drawImage(top_banner, 0, 0 - variance_top, banner_width, banner_height);
+    context.drawImage(bottom_banner, 0, canvas_height - banner_height + variance_bottom, banner_width, banner_height);
+
+    // Score
+    for (let index = 0; index < score_array.length; index++) {
+        var current_num = score_array[index];
+        context.drawImage(current_num.img, current_num.x_pos, score_display_y, current_num.img.width, number_height);
+    }
+
+    if (game_over) {
+        // Flash
+        if (!flash_completed)   {
+            context.fillRect(0, 0, canvas_width, canvas_height);
+            current_flash_intensity -= 0.02
+            context.fillStyle = `rgba(255, 255, 255, ${current_flash_intensity})`;
+            if (current_flash_intensity <= 0) {
+                flash_completed = true;
+                context.fillStyle = 'white';
+            }
+        }
+        context.drawImage(scoreboard.img, scoreboard.x, scoreboard.y, scoreboard.img.width, scoreboard.img.height);
+        if (!scoreboard_drop_animation_completed) move_scoreboard();
+        else display_scoreboard_text();
     }
 }
 
@@ -282,6 +349,7 @@ function gameplay_loop() {
         // Check for collisions with cat
         if (collision(cat, pipe)) {
             game_over = true;
+            high_score = Math.max(high_score, current_score);
             animate_scoreboard();
         }
         // Update score if pipe is passed
@@ -298,74 +366,30 @@ function gameplay_loop() {
 }
 
 function move_scoreboard() {
-    scoreboard.y += 5;
-    scoreboard.y = Math.min(scoreboard.y, scoreboard_target_y);
-}
-// Draw all elements to canvas
-function draw_assets() {
-    // Clear canvas
-    context.clearRect(0,0, canvas_width, canvas_height);
-
-    // Background
-    for (let index = 0; index < background_array.length; index++) {
-        let bg = background_array[index];
-        context.drawImage(bg.img, bg.x, 0, background_width, background_height);
+    scoreboard.y = Math.min(scoreboard.y += 5, scoreboard_target_y);
+    if (scoreboard.y == scoreboard_target_y) {
+        scoreboard_drop_animation_completed = true;
+        console.log("finished drop");
     }
-
-    // Pipes
-    if (pipe_array.length > 0) {
-        for (let index = 0; index < pipe_array.length; index++) {
-            let pipe = pipe_array[index];
-            context.drawImage(pipe.img, pipe.x, pipe.y, pipe_width, pipe_height);
-        }
-    }
-
-    // Michi
-    if (game_over) {
-        cat_rotational_vel = Math.min(cat_rotational_vel + cat_rotational_accel, 0.2);
-        cat_rotation = Math.min(cat_rotation + cat_rotational_vel, 0.4)
-        cat_velocity += 0.2; 
-        cat_velocity = Math.min(cat_velocity, max_vel); 
-        cat.y += cat_velocity; 
-        drawRotatedImage(cat_img, cat.x, cat.y, cat.width, cat.height, cat_rotation * Math.PI); // Angle is in radians
-    }
-    else {
-        context.drawImage(cat_img, cat.x, cat.y, cat.width, cat.height);
-    }
-
-
-    // Clouds/banners
-    context.drawImage(top_banner, 0, 0 - variance_top, banner_width, banner_height);
-    context.drawImage(bottom_banner, 0, canvas_height - banner_height + variance_bottom, banner_width, banner_height);
-
-    // Score
-    for (let index = 0; index < score_array.length; index++) {
-        var current_num = score_array[index];
-        context.drawImage(current_num.img, current_num.x_pos, score_display_y, current_num.img.width, number_height);
-    }
-
-    if (game_over) {
-        context.fillRect(0, 0, canvas_width, canvas_height);
-        current_flash_intensity -= 0.02
-        context.fillStyle = `rgba(255, 255, 255, ${current_flash_intensity})`;
-        context.drawImage(scoreboard.img, scoreboard.x, scoreboard.y, scoreboard.img.width, scoreboard.img.height);
-    }
+    console.log(scoreboard.y)
 }
 
+// Scoreboard frames and x-pos
 function animate_scoreboard() {
     scoreboard.img = scoreboard_images[0];
-    scoreboard.y = - scoreboard.img.height;
     scoreboard.x = (canvas_width / 2) - (scoreboard.img.width / 2)
-    let scoreboard_frame_index = 0; 
-    let scoreboard_frame_interval = setInterval(() => {
-        scoreboard.img = scoreboard_images[scoreboard_frame_index];
-        scoreboard_frame_index += 1;
-    }, frame_interval);
+}
 
-    // Stop the animation after one animation duration
-    setTimeout(() => {
-        clearInterval(scoreboard_frame_interval);
-    }, 100);
+function display_scoreboard_text() {
+    var scoreboard_str = `Score:\n\n\n${current_score}\n\n\n\nHighscore:\n\n\n${high_score}`;
+    var lines = scoreboard_str.split('\n');
+    var x = canvas.width / 2;
+    var y = canvas.height / 2;
+    var lineHeight = 15; 
+
+    lines.forEach((line, index) => {
+        context.fillText(line, x, y + (index * lineHeight));
+    });
 }
 
 // Update banner variation (for position)
@@ -375,7 +399,7 @@ function update_banner_variance() {
 }
 
 // Manifest cat grippers
-function place_paws() { // Needs: check for game over, check for passed pipes
+function place_paws() { 
     // Returns if user has game overed
     if (game_over == true) {
         return;
@@ -452,8 +476,8 @@ function update_score_array() {
         }
         score_array.push(new_number);
     }
-    console.log(score_array)
 }
+
 // Handle "jump" events AND restart
 function cat_jump(event) {
     if (event.code == "Space") {
@@ -465,6 +489,7 @@ function cat_jump(event) {
         }
     }
 }
+
 // Reset vars for gameplay loop
 function reset_gameplay_loop() {
     cat.y = cat_y;
@@ -477,7 +502,9 @@ function reset_gameplay_loop() {
     cat_rotation = 0;
     cat_rotational_vel = 0;
     current_flash_intensity = flash_intensity;
-    scoreboard.y = -scoreboard.img.height
+    flash_completed = false;
+    scoreboard.y = -scoreboard.img.height;
+    scoreboard_drop_animation_completed = false;
     game_over = false;
 }
 
@@ -512,7 +539,6 @@ function drawRotatedImage(img, x, y, width, height, angle) {
     context.drawImage(img, -width / 2, -height / 2, width, height);
     context.restore();
 }
-
 
 function collision(cat, pipe) {
     return (cat.x + cat_hitbox.x2 > pipe.x + paw_hitbox.x1 && // Cat right > pipe left

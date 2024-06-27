@@ -10,3 +10,7 @@ body {
 #board {
     background-image: url(/Assets/4.png);
 }
+
+.pixel-font {
+    font-family: 'Press Start 2P', cursive;
+}
