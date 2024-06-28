@@ -105,8 +105,6 @@ const global_accel = 0.06; // G for cat
 const max_vel = 10;
 
 
-
-
 // NASA PC required to reach here \/\/
 window.onload = async function() {
     canvas = document.getElementById("canvas");
@@ -210,10 +208,10 @@ function load_and_push_assets(resolve) {
 
     // Scoreboard
     var scoreboard_addresses = [];
-    // for (let index = 1; index <= scoreboard_frames; ++index) {
-    //    scoreboard_addresses.push("./assets/scoreboard_" + (index) + ".png");
-    //}
-    scoreboard_addresses.push("./assets/scoreboard_lilly.png")
+    for (let index = 1; index <= 4; ++index) {
+        scoreboard_addresses.push("./assets/scoreboard_lilly" + (index) + ".png");
+    }
+    console.log(scoreboard_addresses);
     scoreboard_addresses.forEach(address => {
         let new_board = new Image();
         new_board.src = address;
@@ -303,6 +301,9 @@ function draw_assets() {
         context.drawImage(scoreboard.img, scoreboard.x, scoreboard.y, scoreboard.img.width, scoreboard.img.height);
         if (!scoreboard_drop_animation_completed) move_scoreboard();
         else display_scoreboard_text();
+        var random_action = Math.floor(Math.random() * 10);
+        if (random_action == 1) cat_blink_animate();
+        if (random_action == 2) cat_glance_animate();
     }
 }
 
@@ -529,6 +530,16 @@ function animate_cat_flight() {
         clearInterval(cat_frame_interval);
         cat_img = cat_images[0]; // Reset to the first frame
     }, animation_duration);
+}
+
+// Scoreboard cat blink
+function cat_blink_animate() {
+
+}
+
+// Scoreboard cat look down
+function cat_glance_animate() {
+
 }
 
 // Function to draw the rotated image
