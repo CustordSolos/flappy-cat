@@ -1,2 +1,4 @@
 # Flappy Cat
-**Flappy cat** game with kuznetsov maths
+Con KuznetsovMaths
+
+https://custord.net/flappycat/
